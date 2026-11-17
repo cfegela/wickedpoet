@@ -935,6 +935,39 @@ textarea.poem-textarea {
   color: var(--text-muted);
 }
 
+/* Compiling Poem Suspense Modal */
+.compiling-icon {
+  font-size: 2.5rem;
+  animation: compilingPulse 1.2s ease-in-out infinite;
+}
+
+.compiling-status {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  min-height: 1.4em;
+}
+
+.compiling-progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.compiling-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--wp-gradient);
+  border-radius: 999px;
+  transition: width 5000ms linear;
+}
+
+@keyframes compilingPulse {
+  0%, 100% { transform: scale(1) rotate(-4deg); }
+  50% { transform: scale(1.12) rotate(4deg); }
+}
+
 .completed-poem-stanzas {
   display: flex;
   flex-direction: column;

@@ -29,6 +29,7 @@ let pollInterval = null;
 let lastSeenRound = 0;
 let isSubmittingTurn = false;
 let renderedCompletedRoomId = null;
+let compilingTimerId = null;
 
 // DOM Elements
 const alertBox = document.getElementById('alert-box');
@@ -63,6 +64,10 @@ const roundStartModal = document.getElementById('round-start-modal');
 const modalRoundTitle = document.getElementById('modal-round-title');
 const modalRoundList = document.getElementById('modal-round-list');
 const btnStartRound = document.getElementById('btn-start-round');
+
+const compilingPoemModal = document.getElementById('compiling-poem-modal');
+const compilingPoemStatus = document.getElementById('compiling-poem-status');
+const compilingProgressBarFill = document.getElementById('compiling-progress-bar-fill');
 
 const playerCount = document.getElementById('player-count');
 const seatsGrid = document.getElementById('seats-grid');
@@ -424,6 +429,11 @@ function showLandingView() {
   closeQrModal();
   closeEndGameModal();
   closeRoundStartModal();
+  if (compilingTimerId) {
+    clearInterval(compilingTimerId);
+    compilingTimerId = null;
+  }
+  if (compilingPoemModal) compilingPoemModal.classList.add('hidden');
 
   if (btnEndActiveGame) btnEndActiveGame.style.display = 'none';
   if (poemInput) poemInput.value = '';
@@ -527,27 +537,77 @@ async function fetchPoemMeta(lines, playerName) {
   return buildClientFallbackMeta(lines, playerName);
 }
 
-function renderCompletedPoems() {
+async function renderCompletedPoems() {
   if (!completedPoemsList || !currentRoom) return;
   if (renderedCompletedRoomId === currentRoom.id) return;
   renderedCompletedRoomId = currentRoom.id;
 
-  completedPoemsList.innerHTML = '';
-
+  const roomIdAtStart = currentRoom.id;
   const poems = completedPoems || [];
   if (poems.length === 0) {
     completedPoemsList.innerHTML = '<p style="color: var(--text-muted);">No poem lines recorded.</p>';
+    if (gameCompletedSection) gameCompletedSection.classList.remove('hidden');
     return;
   }
 
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   const playerName = myPlayer?.display_name || 'Poet';
 
-  poems.forEach((poem) => {
+  // Show Compiling Poem suspense modal with 5-second timer
+  if (gameCompletedSection) gameCompletedSection.classList.add('hidden');
+  if (compilingPoemModal) compilingPoemModal.classList.remove('hidden');
+
+  const statusMessages = [
+    'Consulting the literary academy...',
+    'Inventing a pretentious pen name...',
+    'Crafting a suitably wicked title...',
+    'Binding the final verse...',
+  ];
+  let msgIdx = 0;
+  if (compilingPoemStatus) {
+    compilingPoemStatus.textContent = statusMessages[0];
+  }
+  if (compilingTimerId) clearInterval(compilingTimerId);
+  compilingTimerId = setInterval(() => {
+    msgIdx = (msgIdx + 1) % statusMessages.length;
+    if (compilingPoemStatus) {
+      compilingPoemStatus.textContent = statusMessages[msgIdx];
+    }
+  }, 1250);
+
+  if (compilingProgressBarFill) {
+    compilingProgressBarFill.style.transition = 'none';
+    compilingProgressBarFill.style.width = '0%';
+    void compilingProgressBarFill.offsetWidth;
+    compilingProgressBarFill.style.transition = 'width 5000ms linear';
+    compilingProgressBarFill.style.width = '100%';
+  }
+
+  const [, metas] = await Promise.all([
+    new Promise((resolve) => setTimeout(resolve, 5000)),
+    Promise.all(
+      poems.map((poem) => {
+        const rawLines = (poem.lines || []).map((l) => l.content);
+        return fetchPoemMeta(rawLines, playerName);
+      })
+    ),
+  ]);
+
+  if (compilingTimerId) {
+    clearInterval(compilingTimerId);
+    compilingTimerId = null;
+  }
+  if (compilingPoemModal) compilingPoemModal.classList.add('hidden');
+
+  // Guard in case player left room during the 5s timer
+  if (!currentRoom || currentRoom.id !== roomIdAtStart) return;
+
+  completedPoemsList.innerHTML = '';
+  poems.forEach((poem, idx) => {
     const card = document.createElement('div');
     card.className = 'completed-poem-card';
 
-    const rawLines = (poem.lines || []).map((l) => l.content);
+    const meta = metas[idx] || buildClientFallbackMeta((poem.lines || []).map((l) => l.content), playerName);
     const linesHtml = (poem.lines || [])
       .map(
         (line) => `
@@ -560,20 +620,15 @@ function renderCompletedPoems() {
 
     card.innerHTML = `
       <div class="completed-poem-header">
-        <div class="completed-poem-title">Composing title...</div>
-        <div class="completed-poem-byline">Summoning academic poet...</div>
+        <div class="completed-poem-title">${escapeHtml(meta.title)}</div>
+        <div class="completed-poem-byline">by ${escapeHtml(meta.author)}</div>
       </div>
       <div class="completed-poem-stanzas">${linesHtml}</div>
     `;
     completedPoemsList.appendChild(card);
-
-    const titleEl = card.querySelector('.completed-poem-title');
-    const bylineEl = card.querySelector('.completed-poem-byline');
-    fetchPoemMeta(rawLines, playerName).then((meta) => {
-      if (titleEl) titleEl.textContent = meta.title;
-      if (bylineEl) bylineEl.textContent = `by ${meta.author}`;
-    });
   });
+
+  if (gameCompletedSection) gameCompletedSection.classList.remove('hidden');
 }
 
 async function syncGameState() {
@@ -599,7 +654,6 @@ async function syncGameState() {
       if (gameHudBar) gameHudBar.classList.add('hidden');
       if (waitingRoundOverlay) waitingRoundOverlay.classList.add('hidden');
       if (writingSection) writingSection.classList.add('hidden');
-      if (gameCompletedSection) gameCompletedSection.classList.remove('hidden');
       renderCompletedPoems();
       return;
     }
