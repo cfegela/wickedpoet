@@ -559,7 +559,7 @@ async function renderCompletedPoems() {
 
   const statusMessages = [
     'Consulting the literary academy...',
-    'Inventing a pretentious pen name...',
+    'Researching original authorship...',
     'Crafting a suitably wicked title...',
     'Binding the final verse...',
   ];
