@@ -9,6 +9,10 @@
   "ai": {
     "binding": "AI"
   },
+  "routes": [
+    { "pattern": "wickedpoet.com", "custom_domain": true },
+    { "pattern": "www.wickedpoet.com", "custom_domain": true }
+  ],
   "assets": {
     "directory": "dist",
     "binding": "ASSETS",
