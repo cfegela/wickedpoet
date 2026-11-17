@@ -28,6 +28,7 @@ let currentSubscribedRoomId = null;
 let pollInterval = null;
 let lastSeenRound = 0;
 let isSubmittingTurn = false;
+let renderedCompletedRoomId = null;
 
 // DOM Elements
 const alertBox = document.getElementById('alert-box');
@@ -416,6 +417,7 @@ function showLandingView() {
   previousAuthorName = null;
   completedPoems = null;
   lastSeenRound = 0;
+  renderedCompletedRoomId = null;
 
   setRoomUrl(null);
   closeHostModal();
@@ -487,8 +489,49 @@ function renderWaitingPlayersList() {
   }
 }
 
+function buildClientFallbackMeta(lines, playerName = 'Poet') {
+  const cleanPlayer = String(playerName || 'Poet').trim() || 'Poet';
+  const poemText = lines.join(' ');
+  let hash = 0;
+  for (let i = 0; i < poemText.length; i++) {
+    hash = (hash * 31 + poemText.charCodeAt(i)) >>> 0;
+  }
+  const words = poemText
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 3);
+  const keyword = words.length ? words[hash % words.length] : 'Chaos';
+  const capWord = keyword.charAt(0).toUpperCase() + keyword.slice(1).toLowerCase();
+  return {
+    title: `Treatise on ${capWord} & Mild Regret`,
+    author: `Prof. ${cleanPlayer}ius Von Snodgrass, PhD`,
+  };
+}
+
+async function fetchPoemMeta(lines, playerName) {
+  try {
+    const res = await fetch('/api/generate-poem-meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines, playerName }),
+    });
+    if (!res.ok) throw new Error('Meta endpoint unavailable');
+    const data = await res.json();
+    if (data?.title && data?.author) {
+      return { title: data.title, author: data.author };
+    }
+  } catch {
+    // Fall back when running plain Vite dev without Wrangler
+  }
+  return buildClientFallbackMeta(lines, playerName);
+}
+
 function renderCompletedPoems() {
-  if (!completedPoemsList) return;
+  if (!completedPoemsList || !currentRoom) return;
+  if (renderedCompletedRoomId === currentRoom.id) return;
+  renderedCompletedRoomId = currentRoom.id;
+
   completedPoemsList.innerHTML = '';
 
   const poems = completedPoems || [];
@@ -497,11 +540,14 @@ function renderCompletedPoems() {
     return;
   }
 
-  poems.forEach((poem, idx) => {
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  const playerName = myPlayer?.display_name || 'Poet';
+
+  poems.forEach((poem) => {
     const card = document.createElement('div');
     card.className = 'completed-poem-card';
 
-    const titleText = `Poem ${poem.poem_index + 1}`;
+    const rawLines = (poem.lines || []).map((l) => l.content);
     const linesHtml = (poem.lines || [])
       .map(
         (line) => `
@@ -513,10 +559,20 @@ function renderCompletedPoems() {
       .join('');
 
     card.innerHTML = `
-      <div class="completed-poem-title">${titleText}</div>
+      <div class="completed-poem-header">
+        <div class="completed-poem-title">Composing title...</div>
+        <div class="completed-poem-byline">Summoning academic poet...</div>
+      </div>
       <div class="completed-poem-stanzas">${linesHtml}</div>
     `;
     completedPoemsList.appendChild(card);
+
+    const titleEl = card.querySelector('.completed-poem-title');
+    const bylineEl = card.querySelector('.completed-poem-byline');
+    fetchPoemMeta(rawLines, playerName).then((meta) => {
+      if (titleEl) titleEl.textContent = meta.title;
+      if (bylineEl) bylineEl.textContent = `by ${meta.author}`;
+    });
   });
 }
 
