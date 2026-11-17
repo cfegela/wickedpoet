@@ -1,0 +1,20 @@
+{
+  "name": "wickedpoet-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0",
+    "wrangler": "^4.158.0"
+  }
+}

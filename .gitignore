@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+.env
+.temp/
+.branches/
+frontend/dist/
+frontend/node_modules/
+frontend/.wrangler/

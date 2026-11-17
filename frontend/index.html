@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wicked Poet — Online Multiplayer</title>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="logo-wrapper">
+          <img
+            src="/wicked-poet-logo.svg"
+            alt="Wicked Poet logo"
+            class="hero-logo"
+          />
+        </div>
+      </header>
+
+      <!-- Alert Notification Area -->
+      <div id="alert-box" class="alert alert-error hidden">
+        <span id="alert-msg"></span>
+        <button id="alert-close" class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">✕</button>
+      </div>
+
+      <!-- VIEW 1: LANDING / HOME -->
+      <main id="landing-view">
+        <!-- Host Game Card (Default Homepage View) -->
+        <div id="host-card" class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+          <h2 style="margin-bottom: 0.75rem; font-size: 1.6rem;">Host a Game</h2>
+          <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 1.75rem; line-height: 1.5;">
+            Write twisted verse together—one hidden stanza at a time.<br />
+            No account or login required.
+          </p>
+          <button id="btn-open-host-prompt" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1.05rem;">
+            Start New Game
+          </button>
+        </div>
+
+        <!-- Join Game Card (Shown when an invite link ?room=UUID is opened) -->
+        <div id="join-card" class="card hidden" style="max-width: 500px; margin: 0 auto; text-align: center;">
+          <h2 style="margin-bottom: 0.5rem; font-size: 1.6rem;">Join Game</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.5;">
+            You've been invited to join an online game of <strong>Wicked Poet</strong>!
+          </p>
+          <div class="form-group" style="text-align: left;">
+            <label for="join-player-name">Your Username</label>
+            <input
+              type="text"
+              id="join-player-name"
+              placeholder="Enter your username (e.g. PoeFan)"
+              maxlength="20"
+              autocomplete="off"
+            />
+          </div>
+          <button id="btn-join-game" class="btn btn-success" style="width: 100%; padding: 0.85rem; font-size: 1.05rem;" disabled>
+            Join Game
+          </button>
+        </div>
+
+        <p class="landing-copyright">&copy; 2026 Simplah Software</p>
+      </main>
+
+      <!-- Host Username Modal -->
+      <div id="host-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div>
+            <h3 style="font-size: 1.3rem; margin-bottom: 0.35rem;">Enter Your Username</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              Choose a username to host the game.
+            </p>
+          </div>
+          <div class="form-group">
+            <label for="host-player-name">Username</label>
+            <input
+              type="text"
+              id="host-player-name"
+              placeholder="e.g. PoeFan"
+              maxlength="20"
+              autocomplete="off"
+            />
+          </div>
+          <div class="actions-row modal-actions-row">
+            <button id="btn-cancel-host" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button id="btn-confirm-create-room" class="btn btn-primary" disabled>
+              Start Game
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code Modal -->
+      <div id="qr-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="text-align: center; align-items: center;">
+          <h3 style="font-size: 1.3rem; margin-bottom: 0.25rem;">Scan to Join Game</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">
+            Scan with any phone camera to join this room instantly.
+          </p>
+          <div style="background: #ffffff; padding: 10px; border-radius: 12px; display: inline-flex; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 0.5rem; max-width: 100%; box-sizing: border-box;">
+            <canvas id="qr-canvas" style="max-width: 100%; height: auto; display: block;"></canvas>
+          </div>
+          <button id="btn-close-qr" class="btn btn-secondary" style="width: 100%;">
+            Close
+          </button>
+        </div>
+      </div>
+
+      <!-- End Game Confirmation Modal -->
+      <div id="end-game-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="text-align: center;">
+          <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: #ef4444;">End Game?</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+            Are you sure you want to end the game? This will close the room and return all players to the home screen.
+          </p>
+          <div class="actions-row modal-actions-row">
+            <button id="btn-cancel-end-game" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button id="btn-confirm-end-game" class="btn btn-danger">
+              End Game
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Round Start Modal -->
+      <div id="round-start-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="text-align: center; max-width: 420px;">
+          <h2 id="modal-round-title" style="font-size: 1.85rem; font-weight: 800; margin-bottom: 0.35rem; color: #fff;">Round 1</h2>
+          <ul id="modal-round-list" class="round-start-list">
+            <li>Write 1 or 2 lines of poetry.</li>
+            <li>Hit End Turn in the HUD when you're done.</li>
+            <li>Next round, continue from the previous poet's last few words.</li>
+          </ul>
+          <button id="btn-start-round" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1.05rem;">
+            Start Writing
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW 2: GAME LOBBY -->
+      <main id="lobby-view" class="hidden">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2>Lobby (<span id="player-count">0</span>/6 Players)</h2>
+          </div>
+
+          <!-- Seats Grid (Seats 1-6) -->
+          <div class="seats-grid" id="seats-grid">
+            <!-- Dynamically populated seats -->
+          </div>
+
+          <!-- Lobby Action Buttons -->
+          <div class="lobby-actions-container" style="margin-top: 1.5rem;">
+            <!-- Host Controls -->
+            <div id="host-invite-controls" class="lobby-buttons-grid hidden">
+              <button id="btn-copy-link" class="btn btn-secondary btn-lobby">
+                Invite Link
+              </button>
+              <button id="btn-show-qr" class="btn btn-secondary btn-lobby">
+                QR Code
+              </button>
+              <button id="btn-start-game" class="btn btn-primary btn-lobby" disabled>
+                Start Game
+              </button>
+            </div>
+
+            <!-- Non-Host Controls -->
+            <div id="lobby-wait-msg" class="hidden" style="text-align: center; color: var(--text-muted); font-size: 0.95rem; padding: 0.5rem 0;">
+              Waiting for host to start the game...
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 3: ACTIVE GAME -->
+      <main id="game-view" class="hidden">
+        <!-- Game HUD Status Bar -->
+        <div class="game-hud-bar">
+          <div class="hud-stats-group">
+            <div class="hud-stat-box">
+              <span class="hud-label">Round</span>
+              <span class="hud-value" id="hud-round-number">1 / 2</span>
+            </div>
+            <div class="hud-stat-box">
+              <span class="hud-label">Poets Done</span>
+              <span class="hud-value" id="hud-poets-done">0 / 1</span>
+            </div>
+            <div class="hud-action-box">
+              <button id="btn-end-turn" class="btn btn-primary hud-end-turn-btn" disabled>
+                End Turn
+              </button>
+            </div>
+          </div>
+        </div>
+        <button id="btn-leave-active-game" class="hidden" style="display: none;"></button>
+
+        <!-- Waiting Card (shown after player ends turn while others finish) -->
+        <div id="waiting-round-overlay" class="card waiting-card hidden" style="text-align: center; margin-bottom: 1.25rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.25rem;">⏳</div>
+          <h3 style="font-size: 1.35rem; margin-bottom: 0.35rem;">Verse Submitted!</h3>
+          <p id="waiting-round-subtitle" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
+            Waiting for other poets to finish their lines for this round...
+          </p>
+          <div id="waiting-players-list" style="display: flex; flex-direction: column; gap: 0.5rem; text-align: left; background: rgba(18, 17, 32, 0.55); padding: 0.85rem; border-radius: 10px; border: 1px solid var(--border-color);">
+            <!-- Dynamic player completion status -->
+          </div>
+        </div>
+
+        <!-- Poetry Writing Section -->
+        <div id="writing-section" class="writing-section">
+          <div class="card writing-card">
+            <!-- Truncated Prompt (Shown in Round 2+) -->
+            <div id="prompt-box" class="prompt-box hidden">
+              <div class="prompt-label">
+                Continue from <span id="prompt-author-name">previous poet</span>:
+              </div>
+              <blockquote id="prompt-text" class="prompt-text"></blockquote>
+            </div>
+
+            <!-- Round 1 Opening Header -->
+            <div id="round1-header" class="round1-header">
+              <h2 class="writing-heading">Write Your Opening Lines</h2>
+              <p class="writing-subheading">
+                Pen 1 or 2 lines of poetry to kick off a poem, then tap <strong>End Turn</strong> above.
+              </p>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="poem-input" id="poem-input-label">Your Lines (1–2 lines)</label>
+              <textarea
+                id="poem-input"
+                class="poem-textarea"
+                rows="3"
+                maxlength="400"
+                placeholder="Write a line or two of poetry..."
+                autocomplete="off"
+              ></textarea>
+              <div class="poem-input-meta">
+                <span id="poem-line-hint">1–2 lines recommended</span>
+                <span id="poem-char-count">0 / 400</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Host End Game Action -->
+          <div class="game-bottom-actions">
+            <button id="btn-end-active-game" class="btn btn-danger btn-danger-outline btn-sm" style="display: none;">
+              End Game
+            </button>
+          </div>
+        </div>
+
+        <!-- Game Completed Section (Poem Reveal) -->
+        <div id="game-completed-section" class="completed-section hidden">
+          <div class="card completed-card">
+            <div class="completed-hero">
+              <div class="completed-icon">🪶 📜 ✨</div>
+              <h2 class="completed-headline">The Full Poem</h2>
+              <p class="completed-subheading">
+                Every poet has taken their turns. Read what you created together!
+              </p>
+            </div>
+
+            <div id="completed-poems-list" class="completed-poems-list">
+              <!-- Dynamically populated completed poems -->
+            </div>
+
+            <div class="completed-actions">
+              <button id="btn-completed-home" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1.05rem;">
+                Back to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
